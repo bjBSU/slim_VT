@@ -1,0 +1,12 @@
+text {
+    font-family: sans-serif;
+    font-size: 10px;
+}
+
+.node{
+    stroke-linecap: round;
+}
+
+.link {
+    fill: none;
+}
