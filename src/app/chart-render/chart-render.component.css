@@ -10,3 +10,9 @@ text {
 .link {
     fill: none;
 }
+/* chart-render.component.css */
+svg {
+  width: 100%;
+  height: 500px; /* or a set height */
+  border: 1px solid black; /* Optional, for debugging visibility */
+}

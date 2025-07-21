@@ -1,110 +1,110 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, OnInit } from '@angular/core';
-//import {IData} from services chart-render.interface
-import * as _ from 'lodash';
-import { TangleLayout, TangleLayoutService } from '../services/tangle-layout.service';
+import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
 import * as d3 from 'd3';
-import { color } from 'd3';
-
+import {Bundle, Link, TangleLayoutService, Node} from '../services/tangle-layout.service';
+import * as _ from 'lodash';
+import { ModuleNode } from '../services/process-data.service';
 @Component({
   selector: 'app-chart-render',
-  templateUrl: './chart-render.component.html',
+  templateUrl: './chart-render.component.html',//`<svg #chart></svg>`
   styleUrls: ['./chart-render.component.css']
 })
-export class ChartRenderComponent implements OnInit {
-  @ViewChild("containerRenderChart") element : ElementRef | undefined;
-  //call the chart-render-data
-
-  private svg: any;
-  private margin = 50;
-  private width = 750 - (this.margin * 2);
-  private height = 400 - (this.margin * 2);
-
-  background_color:string = "white";
-  svgContent: string | undefined;
-
-  color = d3.scaleOrdinal(d3.schemeDark2);
-
-  constructor() { }
-
-   ngOnInit(): void {
-    this.createSvg();
-    this.renderChart(this.element).then((result) => {//RENDER CHART
-      console.log('Chart rendered: ', result);
-    }).catch((error) => {
-      console.log('Error rendering chart:', error);
-    });
+export class ChartRenderComponent implements OnChanges {
+    @ViewChild('chart', { static: true }) chart!: ElementRef<SVGElement>;
+    @Input() data: ModuleNode[][] = [];  // <-- Needed to receive data from parent component
+  
+    background_color = 'white';  // <-- Class property, not inside function
+  
+    constructor(private tangleLayoutService: TangleLayoutService) {}
+  
+    ngOnChanges(changes: SimpleChanges): void {
+      if (changes['data'] && this.data?.length > 0) {
+        this.renderChart();
+      }
     }
+    
+    public debugNodes: any[] = [];
+    public levels: any[] = [];
+    public levelNodes: Node[] = [];
+    async renderChart(): Promise<void> {
+      const svg = d3.select(this.chart.nativeElement);
+      svg.selectAll('*').remove(); // Clear previous render
+      const OFFSET_X = 50;
+      const tangleLayout = await this.tangleLayoutService.constructTangleLayout(_.cloneDeep(this.data));
 
-    private createSvg(): void {
-      this.svg = d3.select("figure#bar")
-      .append("svg")
-      .attr("width", this.width + (this.margin * 2))
-      .attr("height", this.height + (this.margin * 2))
-      .append("g")
-      .attr("transform", "translate(" + this.margin + "," + this.margin + ")");
-    }
+      this.debugNodes = tangleLayout.nodes;
+      this.levels = tangleLayout.levels;
+      this.levelNodes = this.levels.flat();
+      svg
+        .attr('width', 1000)//tangleLayout.layout.width
+        .attr('height', 800)//tangleLayout.layout.height
+        .style('background-color', this.background_color);
+  
+      const options = {
+        color: (i: number) => d3.schemeCategory10[i % 50]
+      };
+  
+      // Draw bundles
+      console.log("Chart-render bundles:", tangleLayout.bundles)
+      tangleLayout.bundles.forEach((b: Bundle, i: number) => {
+        if(!b.links || b.links.length === 0)return;//skips bundles with no links
+        b.links.forEach(l => {
+          if(!l.xt || !l.yt ||!l.xs || !l.ys){
+            console.warn("Broken links: ", l);
+            return;
+          }
 
-   public renderChart(data:any, options:any={}): Promise<string>{
-    options.color ||= (d: any, i: string) => color(i);
-    //return tangleLayout = TangleLayoutService.constructTangleLayout(_.cloneDeep(data), options);
-    return TangleLayoutService.constructTangleLayout(_.cloneDeep(data), options).then((tangleLayout: TangleLayout) => {
-      this.svgContent = `<svg width="${tangleLayout.layout.width}", height="${
-      tangleLayout.layout.height}", style="background-color: ${this.background_color}">
-      <style>
-        text {
-          font-family: sans-serif;
-          font-size: 10px;
+          /**
+           * source = starting node(child)
+           * target = the ending node(parent)
+           * xt,yt = top anchor point
+           * xb,yb = midpoint or bend control
+           * xs,ys = bottom anchor point
+           * c1,c2 = control radii for 
+           */
+          const d = `
+            M${l.xt! + OFFSET_X} ${l.yt}
+            L${l.xb! - l.c1! + OFFSET_X} ${l.yt}
+            A${l.c1} ${l.c1} 90 0 1 ${l.xb! + OFFSET_X} ${l.yt! + l.c1!}
+            L${l.xb! + OFFSET_X} ${l.ys! - l.c2!}
+            A${l.c2} ${l.c2} 90 0 0 ${l.xb! + l.c2! + OFFSET_X} ${l.ys}
+            L${l.xs! + OFFSET_X} ${l.ys}
+          `;
+    
+          svg.append('path')
+            .attr('class', 'link')
+            .attr('d', d)
+            .attr('stroke', options.color(i))
+            .attr('stroke-width', 2)
+            .attr('fill', 'none');
         }
-        .node{
-            stroke-linecap: round;
-        }
-        .link {
-            fill: none;
-        }
-      </style>
-
-      ${tangleLayout.bundles.map((b:any, i:any) =>{
-        let d = b.links.map(
-          (l:any) => `
-          M${l.xt} ${l.yt}
-          L${l.bx - l.c1} ${l.yt}
-          A${l.c1} ${l.c1} 90 0 1 ${l.xb} ${l.yt + l.c1}
-          L${l.xb} ${l.ys - l.c2}
-          A${l.c2} ${l.c2} 90 0 0 ${l.xb + l.c2} ${l.ys}
-          L${l.xs} ${l.ys}`
-          )
-          .join("");
-        return `
-          <path class="link" d="${d}" stroke="${this.background_color}" stroke-width="5"/>
-          <path class="link" d="${d}" stroke="${options.color(b, i)}" stroke-width="2"/>
-        `;
-      }).join('')}
-
-      ${tangleLayout.nodes.map(
-        (n:any) => `
-        <path class="selectable node" data-id="${
-          n.id
-        }" stroke="black" stroke-width="8" d="M${n.x} ${n.y - n.height / 2} L${
-          n.x
-        } ${n.y + n.height / 2}"/>
-        <path class="node" stroke="white" stroke-width="4" d="M${n.x} ${n.y -
-          n.height / 2} L${n.x} ${n.y + n.height / 2}"/>
-
-        <text class="selectable" data-id="${n.id}" x="${n.x + 4}" y="${n.y -
-          n.height / 2 -
-          4}" stroke="${this.background_color}" stroke-width="2">${n.id}</text>
-        <text x="${n.x + 4}" y="${n.y -
-          n.height / 2 -
-          4}" style="pointer-events: none;">${n.id}</text>
-      `
-      ).join('')}
-
-      </svg>`;
-     return this.svgContent;
-    }).catch((error: any) => {
-      console.error("Error rendering chart:", error);
-      return '';
+      );
     });
-  }  
-}
+  
+      this.debugNodes.forEach((n: any) => {
+        const x = n.x;
+        const y = n.y;
 
+        if (typeof x !== 'number' || typeof y !== 'number' || isNaN(x) || isNaN(y)) {
+          console.warn('Skipping node with invalid coordinates:', n);
+          return;
+        }
+
+        const xPosition = x + OFFSET_X;
+
+        svg.append('circle')
+          .attr('cx', xPosition)
+          .attr('cy', y)
+          .attr('r', 10)
+          .attr('fill', 'orange')
+          .attr('stroke', 'black')
+          .attr('stroke-width', 2);
+
+          svg.append('text')
+            .attr('x', xPosition)
+            .attr('y', y - 12)
+            .text(n.module)
+            .attr('font-size', '12px')
+            .style('pointer-events', 'none');
+      });
+    }
+  }

@@ -1,12 +1,28 @@
-<p>logger-display works!</p>
+<ng-container *ngIf="mode === 'top'">
+  <p *ngIf="formattedData.length === 0">No data recieved</p>
+  <ng-container *ngIf="newFormat | async as layers">
+    <app-chart-render [data]="layers"></app-chart-render>
+  </ng-container>
+</ng-container>
 
-<div>
-    <h2>Logs</h2>
+<ng-container *ngIf="mode === 'bottom'">
+  <ng-container *ngIf="newFormat | async as layers">
     <ul>
-        <li *ngFor="let message of messages">{{message}}</li>
+      <li *ngFor="let layer of layers; let i = index">         
+        <ul>
+          <li *ngFor="let node of layer">
+            <h2>{{node.module}}</h2>
+            <div class="dataBackDrop">
+              <pre>{{ node | json }}</pre>
+            </div>
+          </li>
+        </ul>
+      </li>
     </ul>
-</div>
+  </ng-container>
 
+  <ng-template #noData>
+    <p>No data available.</p>
+  </ng-template>
+</ng-container>
 
-<!-- possible graphs to use to create mapping connection -->
- <!-- Tangled tree visulization : https://observablehq.com/@nitaku/tangled-tree-visualization-ii-->

@@ -1,0 +1,15 @@
+.link {
+    stroke: #ccc;
+    fill: none;
+  }
+  
+  .node {
+    stroke: white;
+    stroke-width: 1.5px;
+  }
+  
+  .bundle {
+    fill: #aaa;
+    opacity: 0.8;
+  }
+  

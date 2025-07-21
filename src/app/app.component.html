@@ -8,5 +8,16 @@
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 
 <!--My stuff-->
-<h1>Server Logs</h1>
-<app-logger-display></app-logger-display>
+<mat-tab-group>
+    <mat-tab label="Module Connections">
+        <p>Server Logs</p>
+        <app-logger-display [mode]="'top'">
+        </app-logger-display>
+    </mat-tab>
+
+    <mat-tab label="Module Content">
+        <strong>Incoming data</strong>
+        <app-logger-display [mode]="'bottom'">
+        </app-logger-display>
+    </mat-tab>
+</mat-tab-group>

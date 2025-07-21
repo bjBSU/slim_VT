@@ -1,42 +1,41 @@
-// import { Injectable } from '@angular/core';
-
-// @Injectable({
-//   providedIn: 'root'
-// })
-// export class TangleLayoutService {
-
-//   constructor() { }
-// }
-
-import * as d3 from 'd3';
+import * as d3 from 'd3';//min max and descending
 import { Injectable } from '@angular/core';
+import { ModuleNode } from './process-data.service';
+import { NodeConnectionsService } from '../node-connections.service';
+import { has } from 'lodash';
 
+//internal represntation of a module with layout attributes
 export interface Node {
-  id: string;
-  level?: number;
-  parents?: Node[];
-  bundle?: Bundle;
-  bundles?: Bundle[];
-  bundles_index?: Record<string, Bundle[]>;
-  height?: number;
-  x?: number;
-  y?: number;
+  module: string; //module id/name
+  level?: number; //depth in the graph
+  previous_nodes: string[]; //parent modules  
+  next_nodes: string[]; //child modules    
+  bundle?: Bundle; 
+  bundles?: Bundle[]; //sharing dependancy bundles
+  bundles_items?: Record<string, Bundle[]>;//saves a module and its corresponding bundle
+  height?: number; //visual height due to bundles
+  x?: number; // coordinates x
+  y?: number; // coordinates y
 }
 
+//represents a group of shared parent relationships
 export interface Bundle {
-  id: string;
-  parents: Node[];
-  level: number;
-  span: number;
+  module: string; // ID(combination of parent ids)
+  previous_nodes: string[]; //shared parents
+  next_nodes: string[];//child nodes        
+  level?: number; 
+  span?: number;
   i?: number;
   x?: number;
   y?: number;
-  links?: Link[];
+  links?: Link[]; 
 }
 
+//a visual connection between a node and one of its 
+//parents via a bundle
 export interface Link {
-  source: Node;
-  bundle: Bundle;
+  source: string;//Node
+  bundle: Bundle | null;
   target: Node;
   xs?: number;
   ys?: number;
@@ -48,11 +47,7 @@ export interface Link {
   c2?: number;
 }
 
-export interface LayoutOptions{
-  c?: number;
-  bigc?: number;
-}
-
+//configuration (node size and spacing)
 export interface Layout {
   width: number;
   height: number;
@@ -60,17 +55,14 @@ export interface Layout {
   node_width: number;
   bundle_width: number;
   level_y_padding: number;
-  metro_d: number;
+ default_shift: number;
 }
 
-export interface Level extends Array<Node>{
-  bundles?: Bundle[];
-}
-
+//final structure that includes all layout components
 export interface TangleLayout {
   levels: Node[][];
   nodes: Node[];
-  nodes_index: Record<string, Node>;//{ [key: string]: Node };
+  node_index: {[module:string]: Node};
   links: Link[];
   bundles: Bundle[];
   layout: Layout;
@@ -80,276 +72,533 @@ export interface TangleLayout {
   providedIn: 'root',
 })
 export class TangleLayoutService {
-  static constructTangleLayout(levels: Level[], options: LayoutOptions = {}): Promise<TangleLayout>{
-    return new Promise((resolve, reject)=> {
-      //   levels: Node[][];
-      //   nodes: Node[];
-      //   nodes_index: Record<string, Node>;
-      //   links: Link[];
-      //   bundles: Bundle[];
-      //   layout: Layout;
-      // } {
-        levels.forEach((l, i) => l.forEach(n => (n.level = i)));
+  private links  : Link[] = [];
+  private moduleMap = new Map<string, Node>;
+  private nodeLayers : Node[][] = [];
+  private BundleMap: Record<string, Bundle> = {};
+  constructor(private nodeConnections: NodeConnectionsService){};
 
-        const nodes = levels.flat();
-        const nodes_index: Record<string, Node> = {};
-        nodes.forEach(d => (nodes_index[d.id] = d));
+  constructTangleLayout(modules: ModuleNode[][]): Promise<TangleLayout> {
+    return new Promise((resolve, reject) => {
+      try {
+        // Convert ModuleNodes into internal mutable Nodes
+        this.buildNodes(modules, 20, 150, 60);
 
-        nodes.forEach(d => {
-          d.parents = (d.parents || []).map(p => nodes_index[p.id]);
-        });
+        //get all nodes (node objects that have connections)
+        this.nodeLayers = modules.map(layer => 
+          layer.map(m => this.nodeConnections.getNode(m.module)!)
+        );
 
-        levels.forEach((l, i) => {
-          const index: Record<string, Bundle> = {};
-          l.forEach(n => {
-            if (!n.parents || n.parents.length === 0) return;
-
-            const id = n.parents.map(d => d.id).sort().join('-X-');
-            if (index[id]) {
-              index[id].parents = [...index[id].parents, ...n.parents];
-            } else {
-              index[id] = {
-                id,
-                parents: [...n.parents],
-                level: i,
-                span: i - d3.min(n.parents, p => p.level || 0)!
-              };
-            }
-            n.bundle = index[id];
-          });
-          l['bundles'] = Object.values(index);
-          l['bundles'].forEach((b, i) => (b.i = i));
-        });
-
-        const links: Link[] = [];
-        nodes.forEach(d => {
-          if(!d.parents) return;
-          d.parents.forEach(p =>
-            links.push({ source: d, bundle: d.bundle!, target: p })
-          );
-        });
-
-        const bundles = levels.flatMap(l => l['bundles']);
-        
-        bundles.forEach(b => {
-          if(!b) return;
-          b.parents.forEach(p => {
-            p.bundles_index = p.bundles_index || {};
-            p.bundles_index[b.id] = p.bundles_index[b.id] || [];
-            p.bundles_index[b.id].push(b);
-          })
-      });
-
-        nodes.forEach(n => {
-          n.bundles = Object.values(n.bundles_index || {}).flat();
-          n.bundles.sort((a, b) => d3.descending(a.span, b.span));
-          //n.bundles.sort((a, b) => d3.descending(d3.max(a, d => d.span)!, d3.max(b, d => d.span)!));
-          n.bundles.forEach((b, i) => (b.i = i));
-        });
-
-        links.forEach(l => {
-          l.bundle.links = l.bundle.links || [];
-          l.bundle.links.push(l);
-        });
-
-        const padding = 8;
-        const node_height = 22;
-        const node_width = 70;
-        const bundle_width = 14;
-        const level_y_padding = 16;
-        const metro_d = 4;
-        const min_family_height = 22;
-        
-        options.c ||= 16;
-        const c = options.c;
-        options.bigc ||= node_width + c;
-
-        nodes.forEach(n => (n.height = (Math.max(1, (n.bundles?.length || 0)) - 1) * metro_d));
-
-        let x_offset = padding;
-        let y_offset = padding;
-        levels.forEach(l => {
-          x_offset += (l['bundles']?.length || 0) * bundle_width;
-          y_offset += level_y_padding;
-          l.forEach(n => {
-            n.x = n.level! * node_width + x_offset;
-            n.y = node_height + y_offset + (n.height || 0) / 2;
-            y_offset += node_height + (n.height || 0);
-          });
-        });
-
-        let i = 0;
-        levels.forEach(l => {
-          l['bundles']?.forEach(b => {
-            b.x = d3.max(b.parents, d => d.x!)! + node_width + ((l['bundles']?.length || 0) - 1 - b.i!) * bundle_width;
-            b.y = i * node_height;
-          });
-          i += l.length;
-        });
-
-        links.forEach(l => {
-          const firstBundle = l.target.bundles_index![l.bundle.id]?.[0];
-          l.xt = l.target.x!;
-          //l.yt = l.target.y! + l.target.bundles_index![l.bundle.id].i! * metro_d - ((l.target.bundles?.length || 0) * metro_d) / 2 + metro_d / 2;
-          l.yt = l.target.y! + (firstBundle?.i ?? 0) * metro_d - ((l.target.bundles?.length || 0) * metro_d) / 2 + metro_d / 2;
-          l.xb = l.bundle.x!;
-          l.yb = l.bundle.y!;
-          l.xs = l.source.x!;
-          l.ys = l.source.y!;
-        });
+        //compute the links between nodes
+        this.links = this.computeLinks();
+    
+        this.computeBundles();
+        this.computeBundlesBack();
+        this.sortLayersByIndex();
+        this.positionNodes();
+        this.positionBundles();
+        this.compressVerticalSpace();
+        this.positionLinks();
 
         const layout: Layout = {
-          width: d3.max(nodes, n => n.x!)! + node_width + 2 * padding,
-          height: d3.max(nodes, n => n.y!)! + node_height / 2 + 2 * padding,
-          node_height,
-          node_width,
-          bundle_width,
-          level_y_padding,
-          metro_d
-        };
+          width: d3.max(this.nodeLayers.flat(), n => n.x)! + 70,
+          height: d3.max(this.nodeLayers.flat(), n => n.y)! + 11,
+          node_height: 22,
+          node_width: 70,
+          bundle_width: 14,
+          level_y_padding: 16,
+         default_shift: 4
+        }
 
-      resolve({
-        levels, 
-      nodes, 
-      nodes_index, 
-      links, 
-      bundles : bundles.filter((b): b is Bundle => b !== undefined),
-      layout
-      });
+        const node_index : Record<string, Node>= {};
+        this.nodeLayers.flat().forEach(n => node_index[n.module] = n);
+
+        //make sure bundles has no duplicates
+        const bundlesMap = new Map<string, Bundle>();
+        this.nodeLayers.flat().forEach(node => {
+          (node.bundles || []).forEach(bundle => {
+            bundlesMap.set(bundle.module, bundle);
+          });
+        });
+        const bundles = Array.from(bundlesMap.values());
+
+        resolve({
+          levels: this.nodeLayers,
+          nodes: this.nodeLayers.flat(),
+          node_index,
+          links: this.links,
+          bundles,
+          layout
+        });
+      }catch(err){
+        reject(err);
+      }
     });
-  // //   levels: Node[][];
-  // //   nodes: Node[];
-  // //   nodes_index: Record<string, Node>;
-  // //   links: Link[];
-  // //   bundles: Bundle[];
-  // //   layout: Layout;
-  // // } {
-  //   levels.forEach((l, i) => l.forEach(n => (n.level = i)));
+  }
+    /**
+     * Build Nodes takes in a double array of moduleNodes from logger component display
+     * @param modules 
+     * @param nodeHeight 
+     * @param xSpacing 
+     * @param ySpacing 
+     */
+    private buildNodes(modules: ModuleNode[][], nodeHeight: number, xSpacing: number, ySpacing: number):void{
+      //holds the nodes with previous and next nodes
+      const allModuleNodes: Record<string, Node> = {};
 
-  //   const nodes = levels.flat();
-  //   const nodes_index: Record<string, Node> = {};
-  //   nodes.forEach(d => (nodes_index[d.id] = d));
+      modules.flat().forEach(m => {
+        const layerIndex = modules.findIndex(layer => Array.isArray(layer) && layer.includes(m));//finds which layer (sub array)the current ModuleNode m belongs to in module
+        const nodeIndex = modules[layerIndex].indexOf(m);
+        
+        const existingNode = this.nodeConnections.getNode(m.module);
 
-  //   nodes.forEach(d => {
-  //     d.parents = (d.parents || []).map(p => nodes_index[p.id]);
-  //   });
+        const updatedNode : Node = {
+          ...(existingNode ?? {}),//preserve existing fields like next/prev
+          module: m.module,
+          previous_nodes: m.previous_modules ?? existingNode?.previous_nodes ?? [],
+          next_nodes: m.next_modules ?? existingNode?.next_nodes ?? [], 
+          level: layerIndex ?? existingNode?.level,
+          bundle: undefined,
+          bundles: [],
+          bundles_items: undefined,
+          height: nodeHeight,
+          x: layerIndex * xSpacing,
+          y: nodeIndex * ySpacing
+        };
+      this.nodeConnections.setNode(updatedNode);
 
-  //   levels.forEach((l, i) => {
-  //     const index: Record<string, Bundle> = {};
-  //     l.forEach(n => {
-  //       if (!n.parents || n.parents.length === 0) return;
+      allModuleNodes[m.module] = updatedNode;
+      // Step 2: check/populate connections (previous_nodes & next_nodes)
+        const node = allModuleNodes[m.module];
 
-  //       const id = n.parents.map(d => d.id).sort().join('-X-');
-  //       if (index[id]) {
-  //         index[id].parents = [...index[id].parents, ...n.parents];
-  //       } else {
-  //         index[id] = {
-  //           id,
-  //           parents: [...n.parents],
-  //           level: i,
-  //           span: i - d3.min(n.parents, p => p.level || 0)!
-  //         };
-  //       }
-  //       n.bundle = index[id];
-  //     });
-  //     l['bundles'] = Object.values(index);
-  //     l['bundles'].forEach((b, i) => (b.i = i));
-  //   });
+        // Handle previous_modules -> previous_nodes
+        if (m.previous_modules) {
+          m.previous_modules.forEach(prevModName => {
+            const parent = allModuleNodes[prevModName];
+            if (parent && !node.previous_nodes.some(n => n === parent.module)) {
+              node.previous_nodes.push(parent.module);
+            }
+            if (parent && !parent.next_nodes.some(n => n === node.module)) {
+              parent.next_nodes.push(node.module);  // bi-directional link
+            }
+          });
+        }
 
-  //   const links: Link[] = [];
-  //   nodes.forEach(d => {
-  //     if(!d.parents) return;
-  //     d.parents.forEach(p =>
-  //       links.push({ source: d, bundle: d.bundle!, target: p })
-  //     );
-  //   });
+        // Handle next_modules → next_nodes (optional; in case both directions are declared)
+        if (m.next_modules) {
+          m.next_modules.forEach(nextModName => {
+            const child = allModuleNodes[nextModName];
+            if (child && !node.next_nodes.some(n => n === child.module)) {
+              node.next_nodes.push(child.module);
+            }
+            if (child && !child.previous_nodes.some(n => n === node.module)) {
+              child.previous_nodes.push(node.module);  // bi-directional link
+            }
+          });
+        }
+      });
 
-  //   const bundles = levels.flatMap(l => l['bundles']);
-    
-  //   bundles.forEach(b => {
-  //     if(!b) return;
-  //     b.parents.forEach(p => {
-  //       p.bundles_index = p.bundles_index || {};
-  //       p.bundles_index[b.id] = p.bundles_index[b.id] || [];
-  //       p.bundles_index[b.id].push(b);
-  //     })
-  // });
+      // Step 3: Save into cache
+      Object.values(allModuleNodes).forEach(node => {
+        this.nodeConnections.setNode(node);
+      });
+      //checks node levels
+      // Object.values(allModuleNodes).forEach(node => {
+      //   if(node.previous_nodes.length > 0){
+      //     const parentLevels = node.previous_nodes.map(p => allModuleNodes[p]?.level ?? 0);
+      //     node.level = Math.max(...parentLevels) + 1;
+      //   }else{
+      //     node.level = 0;
+      //   }
+      //   this.nodeConnections.setNode(node);
+      // });
+      //adds to cache(overwrites old node with new information if applicable)
+      this.moduleToCache(this.nodeConnections.getAllNodes());
+    }
 
-  //   nodes.forEach(n => {
-  //     n.bundles = Object.values(n.bundles_index || {}).flat();
-  //     n.bundles.sort((a, b) => d3.descending(a.span, b.span));
-  //     //n.bundles.sort((a, b) => d3.descending(d3.max(a, d => d.span)!, d3.max(b, d => d.span)!));
-  //     n.bundles.forEach((b, i) => (b.i = i));
-  //   });
+    //function that computes relationship between parent and child modules
+    private computeBundles(){
+      const reverseMap: Record<string, string[]> = {};//maps each node to its parent mod name
 
-  //   links.forEach(l => {
-  //     l.bundle.links = l.bundle.links || [];
-  //     l.bundle.links.push(l);
-  //   });
+      //flattends all levels into a single array of nodes
+      this.nodeLayers.flat().forEach(n => this.moduleMap.set(n.module, n));
 
-  //   const padding = 8;
-  //   const node_height = 22;
-  //   const node_width = 70;
-  //   const bundle_width = 14;
-  //   const level_y_padding = 16;
-  //   const metro_d = 4;
-  //   const min_family_height = 22;
-    
-  //   options.c ||= 16;
-  //   const c = options.c;
-  //   options.bigc ||= node_width + c;
+      //builds reverse map
+      this.links.forEach(link => {
+        if(!link.source && link.target){
+          //treat missing source as root node
+          if(!reverseMap[link.target.module]) reverseMap[link.target.module] = [];
+        }
 
-  //   nodes.forEach(n => (n.height = (Math.max(1, (n.bundles?.length || 0)) - 1) * metro_d));
+        if(link.source && link.target){
+          //if this is a regular target-source node 
+          const targetId = link.target.module;
+          const sourceId = link.source;
+          if(!reverseMap[targetId]){
+          reverseMap[targetId] = [];
+          }
+          //add the source node to the list of parents for the target node
+          reverseMap[targetId].push(sourceId);
+          }
+        });
 
-  //   let x_offset = padding;
-  //   let y_offset = padding;
-  //   levels.forEach(l => {
-  //     x_offset += (l['bundles']?.length || 0) * bundle_width;
-  //     y_offset += level_y_padding;
-  //     l.forEach(n => {
-  //       n.x = n.level! * node_width + x_offset;
-  //       n.y = node_height + y_offset + (n.height || 0) / 2;
-  //       y_offset += node_height + (n.height || 0);
-  //     });
-  //   });
+      //step 2: go through each level and group bundles by shared parent sets
+      this.nodeLayers.forEach((level, i) => {
 
-  //   let i = 0;
-  //   levels.forEach(l => {
-  //     l['bundles']?.forEach(b => {
-  //       b.x = d3.max(b.parents, d => d.x!)! + node_width + ((l['bundles']?.length || 0) - 1 - b.i!) * bundle_width;
-  //       b.y = i * node_height;
-  //     });
-  //     i += l.length;
-  //   });
+        for(const node of level){
+          const parents = reverseMap[node.module];//find the parents of the node 
 
-  //   links.forEach(l => {
-  //     const firstBundle = l.target.bundles_index![l.bundle.id]?.[0];
-  //     l.xt = l.target.x!;
-  //     //l.yt = l.target.y! + l.target.bundles_index![l.bundle.id].i! * metro_d - ((l.target.bundles?.length || 0) * metro_d) / 2 + metro_d / 2;
-  //     l.yt = l.target.y! + (firstBundle?.i ?? 0) * metro_d - ((l.target.bundles?.length || 0) * metro_d) / 2 + metro_d / 2;
-  //     l.xb = l.bundle.x!;
-  //     l.yb = l.bundle.y!;
-  //     l.xs = l.source.x!;
-  //     l.ys = l.source.y!;
-  //   });
+          if(parents){
+            const key = [...parents].sort().join('-X-');
+      
+            if(this.BundleMap[key])continue;
+            else{
+              this.BundleMap[key] = {
+                module: key,
+                previous_nodes: [...parents],
+                next_nodes:[],
+                level: i,
+                span: i - Math.min(...parents.map(p => this.moduleMap.get(p)?.level ?? 0)),//fall back for undefined levels
+                i: Object.keys(this.BundleMap).length,
+                x: 1,
+                y: 1,
+                links: [],
+              };
+            }
+            
+            //make sure that the node module isnt also its own parent
+            if(node.module != node.previous_nodes.find((n: string) => n === node.module)){
+              node.bundle = this.BundleMap[key]; 
+            }
+          }         
+        }
+        //assign bundle back to node
+        const bundles = Object.values(this.BundleMap);
+        level.forEach(node => {//get a node in Node[]
+          const nodeBundle = node.bundle;//get the bundle for that node
 
-  //   const layout: Layout = {
-  //     width: d3.max(nodes, n => n.x!)! + node_width + 2 * padding,
-  //     height: d3.max(nodes, n => n.y!)! + node_height / 2 + 2 * padding,
-  //     node_height,
-  //     node_width,
-  //     bundle_width,
-  //     level_y_padding,
-  //     metro_d
-  //   };
+          if (nodeBundle) {
+            node.bundles ||= [];//if it doesnt exist
+            node.bundles_items ||= {};
 
-    // return { 
-    //   levels, 
-    //   nodes, 
-    //   nodes_index, 
-    //   links, 
-    //   bundles : bundles.filter((b): b is Bundle => b !== undefined),
-    //   layout 
-    // };
+            if(nodeBundle && !node.bundles.includes(nodeBundle)){
+              node.bundles.push(nodeBundle);//nodeBundle into that nodes bundles
+              node.bundles_items[node.module] = [nodeBundle];
+            }
+            console.log("computeBundles:node", node);
+          } 
+        });
+        bundles.forEach((b: Bundle, idx: number) =>{
+          if(b.i === undefined){
+            b.i = idx;//update index for spacing
+          }
+        } );
+      });
+      //each link get assigned a bundle, based on target nodes bundle
+      this.links.forEach(link => {
+        if (typeof link.target === 'object') {
+          const targetBundle = link.target.bundle ?? null;
+          //link.bundle = link.target.bundle ?? null;
+          if(link.bundle !== targetBundle){
+            link.bundle = targetBundle;
+          }
+        }
+        console.log("End of computeBundles:links", link)
+      });
+    }
+        
+    private computeLinks(): Link[]{
+      //add check that sees if nodeConnections already has that link and if so skip
+      const linkExists = (source:string, target: Node): boolean => {
+        return this.links.some(link =>
+          link.source === source && link.target === target
+        );
+      };
+
+      this.nodeConnections.getAllNodes().forEach((n:Node) => {
+        if(n.previous_nodes !== null){
+          n.previous_nodes.forEach((p:string) => {
+            //asign bundle from the target(p) since thats how bundles are grouped later
+            if(!p || linkExists(p,n)) {
+              return;
+            }else{
+              this.links.push({
+                source: p, 
+                target: n,
+                bundle: n.bundle ?? null,
+              });
+            }
+          });
+          //set level of n based on its parents
+          const parentLevel = n.previous_nodes
+            .map(p => this.nodeConnections.getNode(p)?.level)
+            .filter(lvl => lvl != null) as number[];
+
+          if(parentLevel.length > 0){
+            const maxParentLevel = Math.max(...parentLevel);
+            n.level =  maxParentLevel + 1;
+          }else if(n.level == null){
+            n.level = 0;
+          }
+        }
+      });
+
+      this.sortLayersByIndex();
+      console.log("computeLinks:", this.links);
+      return this.links;
+    }
+
+    private computeBundlesBack(){
+      this.nodeLayers.flat().forEach(n => this.moduleMap.set(n.module, n));
+
+      const allNodes = this.nodeLayers.flat();
+      const bundles = allNodes.flatMap((l:Node) => l.bundles || []);//for each node grab bundles
+      
+      // Reverse pointer for bundles
+      bundles.forEach(b => {//loop through each bundle
+        b.previous_nodes.forEach((pModule: string) => {//for each parent node of the bundle
+          const p = this.moduleMap.get(pModule);//look up the coresponding node for that parent module??????
+          if(!p){
+            return;
+          }
+          else if(p.bundles_items === undefined){//if parent has no bundles_index yet create it
+            p.bundles_items = {};
+            return;
+          }
+          if(!(b.module in p.bundles_items)){
+            p.bundles_items[b.module] = [b];
+          }else if(!p.bundles_items[b.module].includes(b)){//if it isnt already listed under the parent, initalize it with empty array
+            p.bundles_items[b.module].push(b);
+          }
+        });
+      });
+
+      allNodes.forEach(n => {//go through all nodes
+        n.bundles_items ||= {};//checks if its undefined
+        n.bundles = [... (n.bundles || [])];
+
+        //sorts bundles in desc order of their max span
+        n.bundles.sort((a, b) => d3.descending(
+          d3.max(a.links!, l => l.bundle ? l.bundle.span : -Infinity), 
+          d3.max(b.links!, l => l.bundle ? l.bundle.span : -Infinity))
+        );
+        n.bundles.forEach((b, i) => {
+          if(b.i === undefined){
+            b.i = i;
+          }
+        });
+      });
+
+      //redone for missing source and target nodes
+      this.links.forEach(l => {
+        if(!l.bundle){
+          console.warn("Link missing bundle:", l);
+          return;
+        }
+        const alreadyExists = l.bundle.links?.some(existing => 
+          existing.source === l.source && existing.target.module === l.target.module
+        );
+        if(!alreadyExists){
+          l.bundle.links?.push(l);
+        }
+      });
+    }
+
+    private positionNodes(){
+      // Layout constants
+      const padding = 8;
+      const node_height = 22;
+      const level_y_padding = 40;
+
+      console.log("nodeLayers:", this.nodeLayers);
+      this.nodeLayers.forEach((level, levelIndex) => {
+        console.log("node layers in posNodes", level);
+        let y_offset = padding;
+
+        level.forEach(node => {
+          node.x = levelIndex * 90 + padding;
+          node.y = y_offset;
+          // node.y = level_y_padding;
+          // y_offset += node.height ?? node_height + level_y_padding;
+          console.log("x position", node.x, "for node", node.module);
+        });
+        y_offset += node_height + level_y_padding;
+      });
+    }
+
+    private positionBundles(){
+      let i = 0;
+      this.nodeLayers.flat().forEach(level => {
+        if(!level.bundles) return;
+        level.bundles!.forEach((b: Bundle) => {
+          b.x = 0; // Reset to prevent drift
+          b.y = 0;
+        });
+      });
+
+      this.nodeLayers.flat().forEach(n => this.moduleMap.set(n.module, n));
+      
+      this.nodeLayers.flat().forEach(level => {
+        if(!level.bundles) return;
+
+        level.bundles!.forEach((b: Bundle) => {
+          b.x = d3.max(b.previous_nodes, p => this.moduleMap.get(p)?.x)! + (level.bundles!.length - b.i!) * 14;
+          b.y = i * 22;//will change y poistioning based on the level
+        });
+        i += level.level ?? 1;
+      });
+    }
+
+
+    private positionLinks(){
+      const default_shift = 4;
+      const defaultControlOffset = 5;
+      if(this.nodeLayers)
+
+      this.links.forEach(l => {
+        const hasTarget = l.target;
+        const hasSource = this.moduleMap.get(l.source);
+
+        const bundleList = l.target.bundle?.previous_nodes;
+            const bundleIndex = Array.isArray(bundleList) ? bundleList.findIndex(mod => mod === l.source)+ 1 : 1;
+        
+        //position source point
+        if(hasSource){
+          l.xs = hasSource.x!;
+          l.ys = hasSource.y!;
+          console.log("l.xs:", l.xs);
+        }
+
+        //position target-side if target and bundle exist
+        if(hasTarget && l.bundle){
+            l.xt = l.target.x! + bundleIndex * default_shift;
+            l.yt = l.target.y! + bundleIndex * default_shift
+                  - (l.target.bundles!.length * default_shift) / 2 + default_shift / 2 - 10;
+            l.xb = l.bundle.x! + 35 + default_shift;
+            l.yb = l.bundle.y! + default_shift;
+        } 
+
+        if(hasSource && hasTarget){
+          const sourceLevel = hasSource.level ?? 0;
+          const targetLevel = hasTarget.level ?? 0;
+          const levelDiff = sourceLevel - targetLevel;
+          const dyOffset = levelDiff > 1
+            ? Math.min(50, Math.abs(l.xb! - l.xt!), Math.abs(l.yb! - l.yt!)) - defaultControlOffset
+            :  -defaultControlOffset;
+
+          l.c1 = dyOffset;
+          l.c2 = dyOffset;
+        }
+      });
+    }
+
+    private compressVerticalSpace() {
+      // Total vertical offset applied so far
+      let accumulatedYOffset = 0;
+
+      this.nodeLayers.forEach((level: Node[]) => {
+        level.forEach(l =>{
+          //const validBundles = l.bundles ?? [];
+          // const minOffset = d3.min(validBundles, (b: Bundle) => 
+          //   d3.min(b.links!, link =>
+          //   link.ys! - link.yt!
+          //   )
+          // ) || l.y!;
+          const minOffset = -32;
+          accumulatedYOffset += minOffset;
+
+          if(l.y! >= accumulatedYOffset){
+            l.y! -= accumulatedYOffset;
+          }
+        });
+      });
+    }
+
+  //create a connection cache
+  //allNodes isnt being called directly this is being refernced in 
+  // buildNodes and each node is being added one at a time
+  private moduleToCache(allNodes: Node[]){
+    allNodes.forEach(node => {
+
+      //add the node itself to the map
+      if(!this.nodeConnections.has(node.module)){
+        this.nodeConnections.setNode({...node});
+      }
+
+      const currentNode = this.nodeConnections.getNode(node.module)!;
+      if(!currentNode) return;
+
+      //handle previous nodes (parents)
+      node.previous_nodes?.forEach(parent => { //get each parent node
+        if(!this.nodeConnections.has(parent)){//check if parent node exists in nodeConnections
+          const parentNode = allNodes.find(n => n.module === parent);
+          if(parentNode){
+            //adds the parent to nodeConnections if it wasnt previously there
+            this.nodeConnections.setNode({...parentNode});
+          }else{
+            return;
+          }
+        }
+
+        const parentNode = this.nodeConnections.getNode(parent)!;
+        if(!parentNode) return;
+
+        //bidirectional linking
+        if(!parentNode.next_nodes.includes(currentNode.module)){
+          parentNode.next_nodes.push(currentNode.module);
+          this.nodeConnections.setNode(currentNode);
+        }
+        if (!currentNode.previous_nodes.includes(parentNode.module)){
+          currentNode.previous_nodes.push(parentNode.module);
+          currentNode.level!++;
+          this.nodeConnections.setNode(parentNode);
+        }
+      });
+      
+      //handle next nodes (children)
+      node.next_nodes?.forEach(child => {
+
+        if(!this.nodeConnections.has(child)){
+          const childNode = allNodes.find(n => n.module === child);
+          if(childNode){
+            //adds the child to nodeConnections if it wasnt previously there
+            this.nodeConnections.setNode({...childNode});
+          }else{
+            return;
+          }
+        }
+
+        const childNode = this.nodeConnections.getNode(child)!;
+        if(!childNode) return;
+
+        //bidirectional linking
+        if(!childNode.previous_nodes.includes(currentNode.module)){
+          childNode.previous_nodes.push(currentNode.module);
+          this.nodeConnections.setNode(currentNode);
+        }
+        if (!currentNode.next_nodes.includes(childNode.module)){
+          currentNode.next_nodes.push(childNode.module);
+          this.nodeConnections.setNode(childNode);
+        }
+      });
+      node.level = node.previous_nodes.length;
+    });
+  }
+
+  private sortLayersByIndex(){
+    const levelMap: Record<number, Node[]> = {};
+
+    this.nodeLayers.flat().forEach(node => {
+      if(node.level == null) return;
+      //if levelMap doesnt have that node level, create it
+      if(!levelMap[node.level]){
+        levelMap[node.level] = [];
+      }
+      levelMap[node.level].push(node);//and add it
+    });
+    this.nodeLayers = Object.keys(levelMap)
+      .map(lvl => parseInt(lvl, 10))//lvl is string to int, 10 means base 10
+      .sort((a,b) => a-b)//sorts the values in ascending order
+      .map(lvl => levelMap[lvl]);//adds back to levelMap(thus sorting the levels)
   }
 }

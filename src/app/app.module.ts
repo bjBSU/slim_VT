@@ -5,7 +5,8 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { LoggerDisplayComponent } from './logger-display/logger-display.component';
 import { ChartRenderComponent } from './chart-render/chart-render.component';
-//import { ChartRenderDataComponent } from './chart-render-data/chart-render-data.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatTabsModule } from '@angular/material/tabs';
 
 @NgModule({
   declarations: [
@@ -14,9 +15,15 @@ import { ChartRenderComponent } from './chart-render/chart-render.component';
     ChartRenderComponent,
     //ChartRenderDataComponent
   ],
+  exports:[
+    ChartRenderComponent
+  ],
   imports: [
     BrowserModule,
-    AppRoutingModule
+    AppRoutingModule,
+    BrowserAnimationsModule,
+    MatTabsModule,
+    BrowserAnimationsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

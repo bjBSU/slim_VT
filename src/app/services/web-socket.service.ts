@@ -28,7 +28,7 @@ export class WebSocketService {
     return new Observable(observer => {
       this.socket.on('server_logger', (message) => {
         observer.next(message);
-        this.socket.emit("message recieved by angular client")
+        this.socket.emit("message recieved by angular client", message)
       });
 
       //clean up when socket listener leaves
