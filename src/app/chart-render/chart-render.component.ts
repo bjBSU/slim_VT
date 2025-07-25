@@ -5,14 +5,14 @@ import * as _ from 'lodash';
 import { ModuleNode } from '../services/process-data.service';
 @Component({
   selector: 'app-chart-render',
-  templateUrl: './chart-render.component.html',//`<svg #chart></svg>`
+  templateUrl: './chart-render.component.html',
   styleUrls: ['./chart-render.component.css']
 })
 export class ChartRenderComponent implements OnChanges {
     @ViewChild('chart', { static: true }) chart!: ElementRef<SVGElement>;
-    @Input() data: ModuleNode[][] = [];  // <-- Needed to receive data from parent component
+    @Input() data: ModuleNode[][] = []; 
   
-    background_color = 'white';  // <-- Class property, not inside function
+    background_color = 'white';
   
     constructor(private tangleLayoutService: TangleLayoutService) {}
   

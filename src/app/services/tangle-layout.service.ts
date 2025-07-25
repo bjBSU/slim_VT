@@ -158,7 +158,7 @@ export class TangleLayoutService {
           previous_nodes: m.previous_modules ?? existingNode?.previous_nodes ?? [],
           next_nodes: m.next_modules ?? existingNode?.next_nodes ?? [], 
           level: layerIndex ?? existingNode?.level,
-          bundle: undefined,
+          bundle: existingNode?.bundle ?? undefined,
           bundles: [],
           bundles_items: undefined,
           height: nodeHeight,
@@ -168,6 +168,7 @@ export class TangleLayoutService {
       this.nodeConnections.setNode(updatedNode);
 
       allModuleNodes[m.module] = updatedNode;
+
       // Step 2: check/populate connections (previous_nodes & next_nodes)
         const node = allModuleNodes[m.module];
 
@@ -202,17 +203,6 @@ export class TangleLayoutService {
       Object.values(allModuleNodes).forEach(node => {
         this.nodeConnections.setNode(node);
       });
-      //checks node levels
-      // Object.values(allModuleNodes).forEach(node => {
-      //   if(node.previous_nodes.length > 0){
-      //     const parentLevels = node.previous_nodes.map(p => allModuleNodes[p]?.level ?? 0);
-      //     node.level = Math.max(...parentLevels) + 1;
-      //   }else{
-      //     node.level = 0;
-      //   }
-      //   this.nodeConnections.setNode(node);
-      // });
-      //adds to cache(overwrites old node with new information if applicable)
       this.moduleToCache(this.nodeConnections.getAllNodes());
     }
 
@@ -265,8 +255,7 @@ export class TangleLayoutService {
                 links: [],
               };
             }
-            
-            //make sure that the node module isnt also its own parent
+            console.log("content in BundleMap", this.BundleMap[key]);
             if(node.module != node.previous_nodes.find((n: string) => n === node.module)){
               node.bundle = this.BundleMap[key]; 
             }
@@ -274,7 +263,7 @@ export class TangleLayoutService {
         }
         //assign bundle back to node
         const bundles = Object.values(this.BundleMap);
-        level.forEach(node => {//get a node in Node[]
+        level.forEach(node => {
           const nodeBundle = node.bundle;//get the bundle for that node
 
           if (nodeBundle) {
@@ -285,25 +274,24 @@ export class TangleLayoutService {
               node.bundles.push(nodeBundle);//nodeBundle into that nodes bundles
               node.bundles_items[node.module] = [nodeBundle];
             }
-            console.log("computeBundles:node", node);
           } 
         });
+
         bundles.forEach((b: Bundle, idx: number) =>{
           if(b.i === undefined){
             b.i = idx;//update index for spacing
           }
         } );
       });
+
       //each link get assigned a bundle, based on target nodes bundle
       this.links.forEach(link => {
         if (typeof link.target === 'object') {
           const targetBundle = link.target.bundle ?? null;
-          //link.bundle = link.target.bundle ?? null;
           if(link.bundle !== targetBundle){
             link.bundle = targetBundle;
           }
         }
-        console.log("End of computeBundles:links", link)
       });
     }
         
@@ -319,7 +307,7 @@ export class TangleLayoutService {
         if(n.previous_nodes !== null){
           n.previous_nodes.forEach((p:string) => {
             //asign bundle from the target(p) since thats how bundles are grouped later
-            if(!p || linkExists(p,n)) {
+            if(linkExists(p,n)) {
               return;
             }else{
               this.links.push({
@@ -344,7 +332,6 @@ export class TangleLayoutService {
       });
 
       this.sortLayersByIndex();
-      console.log("computeLinks:", this.links);
       return this.links;
     }
 
@@ -357,17 +344,18 @@ export class TangleLayoutService {
       // Reverse pointer for bundles
       bundles.forEach(b => {//loop through each bundle
         b.previous_nodes.forEach((pModule: string) => {//for each parent node of the bundle
-          const p = this.moduleMap.get(pModule);//look up the coresponding node for that parent module??????
+          const p = this.moduleMap.get(pModule);//look up the coresponding node for that parent module????
           if(!p){
             return;
           }
           else if(p.bundles_items === undefined){//if parent has no bundles_index yet create it
             p.bundles_items = {};
-            return;
+            //return;
           }
           if(!(b.module in p.bundles_items)){
             p.bundles_items[b.module] = [b];
-          }else if(!p.bundles_items[b.module].includes(b)){//if it isnt already listed under the parent, initalize it with empty array
+          }
+          if(!p.bundles_items[b.module].includes(b)){//if it isnt already listed under the parent, initalize it with empty array
             p.bundles_items[b.module].push(b);
           }
         });
@@ -410,17 +398,12 @@ export class TangleLayoutService {
       const node_height = 22;
       const level_y_padding = 40;
 
-      console.log("nodeLayers:", this.nodeLayers);
       this.nodeLayers.forEach((level, levelIndex) => {
-        console.log("node layers in posNodes", level);
         let y_offset = padding;
 
         level.forEach(node => {
           node.x = levelIndex * 90 + padding;
           node.y = y_offset;
-          // node.y = level_y_padding;
-          // y_offset += node.height ?? node_height + level_y_padding;
-          console.log("x position", node.x, "for node", node.module);
         });
         y_offset += node_height + level_y_padding;
       });
@@ -466,7 +449,6 @@ export class TangleLayoutService {
         if(hasSource){
           l.xs = hasSource.x!;
           l.ys = hasSource.y!;
-          console.log("l.xs:", l.xs);
         }
 
         //position target-side if target and bundle exist
