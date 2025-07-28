@@ -35,8 +35,8 @@ export class ChartRenderComponent implements OnChanges {
       this.levels = tangleLayout.levels;
       this.levelNodes = this.levels.flat();
       svg
-        .attr('width', 1000)//tangleLayout.layout.width
-        .attr('height', 800)//tangleLayout.layout.height
+        .attr('width', 1000)
+        .attr('height', 800)
         .style('background-color', this.background_color);
   
       const options = {

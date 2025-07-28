@@ -241,8 +241,7 @@ export class TangleLayoutService {
           if(parents){
             const key = [...parents].sort().join('-X-');
       
-            if(this.BundleMap[key])continue;
-            else{
+            if(!this.BundleMap[key]){
               this.BundleMap[key] = {
                 module: key,
                 previous_nodes: [...parents],
@@ -255,7 +254,7 @@ export class TangleLayoutService {
                 links: [],
               };
             }
-            console.log("content in BundleMap", this.BundleMap[key]);
+            console.log("created new key in BundleMap", this.BundleMap[key]);
             if(node.module != node.previous_nodes.find((n: string) => n === node.module)){
               node.bundle = this.BundleMap[key]; 
             }
@@ -264,14 +263,14 @@ export class TangleLayoutService {
         //assign bundle back to node
         const bundles = Object.values(this.BundleMap);
         level.forEach(node => {
-          const nodeBundle = node.bundle;//get the bundle for that node
+          const nodeBundle = node.bundle;
 
           if (nodeBundle) {
-            node.bundles ||= [];//if it doesnt exist
+            node.bundles ||= [];
             node.bundles_items ||= {};
 
             if(nodeBundle && !node.bundles.includes(nodeBundle)){
-              node.bundles.push(nodeBundle);//nodeBundle into that nodes bundles
+              node.bundles.push(nodeBundle);
               node.bundles_items[node.module] = [nodeBundle];
             }
           } 
@@ -399,7 +398,7 @@ export class TangleLayoutService {
       const level_y_padding = 40;
 
       this.nodeLayers.forEach((level, levelIndex) => {
-        let y_offset = padding;
+        let y_offset = node_height;
 
         level.forEach(node => {
           node.x = levelIndex * 90 + padding;
@@ -453,7 +452,7 @@ export class TangleLayoutService {
 
         //position target-side if target and bundle exist
         if(hasTarget && l.bundle){
-            l.xt = l.target.x! + bundleIndex * default_shift;
+            l.xt = l.target.x!;
             l.yt = l.target.y! + bundleIndex * default_shift
                   - (l.target.bundles!.length * default_shift) / 2 + default_shift / 2 - 10;
             l.xb = l.bundle.x! + 35 + default_shift;
@@ -480,12 +479,6 @@ export class TangleLayoutService {
 
       this.nodeLayers.forEach((level: Node[]) => {
         level.forEach(l =>{
-          //const validBundles = l.bundles ?? [];
-          // const minOffset = d3.min(validBundles, (b: Bundle) => 
-          //   d3.min(b.links!, link =>
-          //   link.ys! - link.yt!
-          //   )
-          // ) || l.y!;
           const minOffset = -32;
           accumulatedYOffset += minOffset;
 
