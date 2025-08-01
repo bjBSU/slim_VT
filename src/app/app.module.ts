@@ -13,7 +13,6 @@ import { MatTabsModule } from '@angular/material/tabs';
     AppComponent,
     LoggerDisplayComponent,
     ChartRenderComponent,
-    //ChartRenderDataComponent
   ],
   exports:[
     ChartRenderComponent

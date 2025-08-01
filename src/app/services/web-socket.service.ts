@@ -10,7 +10,7 @@ export class WebSocketService {
   constructor() { 
     this.socket = io('http://localhost:3000', {
       reconnection : true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 100,
       reconnectionDelay: 1000
     });
 
