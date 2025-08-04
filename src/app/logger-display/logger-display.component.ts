@@ -39,6 +39,14 @@ export class LoggerDisplayComponent implements OnInit {
   stringify(object: any): string {
     return JSON.stringify(object, null, 2);  // Converts to a readable JSON string
   }
+
+  // trackLayerByIndex(index:number, item: any):number{
+  //   return index;
+  // }
+
+  // trackNodeById(index:number, node:ModuleNode):string{
+  //   return node?.first_iuid || index.toString();
+  // }
 }
 
   

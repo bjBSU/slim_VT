@@ -19,6 +19,7 @@ export class WebSocketService {
     });
 
     this.socket.on('disconnect', (reason) =>{
+      // window.location.reload();
       console.log('disconnected: ', reason);
     })
   }
