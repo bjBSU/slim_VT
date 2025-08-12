@@ -1,7 +1,7 @@
 import * as d3 from 'd3';//min max and descending
 import { Injectable } from '@angular/core';
 import { ModuleNode } from './process-data.service';
-import { NodeConnectionsService } from '../node-connections.service';
+import { NodeConnectionsService } from '../services/node-connections.service';
 import { has } from 'lodash';
 
 //internal represntation of a module with layout attributes

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Node } from './services/tangle-layout.service';
+import { Node } from '../services/tangle-layout.service';
 
 @Injectable({
   providedIn: 'root'
@@ -42,7 +42,6 @@ export class NodeConnectionsService {
       return newNode;
     }
   }
-
 
   getNode(key: string): Node | undefined{
       return this.idToNode[key];

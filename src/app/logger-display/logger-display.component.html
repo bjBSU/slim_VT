@@ -6,30 +6,11 @@
 </ng-container>
 
 <ng-container *ngIf="mode === 'bottom'">
-  <ng-container *ngIf="newFormat | async as layers">
-    <ul>
-      <div *ngFor="let layer of layers">         
-        <ul>
-          <li *ngFor="let node of layer">
-            <h2>{{node.module}}</h2>
-            <div class="dataBackDrop" height=node.size() width=node.length()+5>
-              <pre style="font-family:verdana">Event: {{ node.event }}
-                Timestamp: {{node.timestamp}}
-                IU Type: {{node.level}}
-                First IU created at: {{node.first_iu_created_at}}
-                First IU id: {{node.first_iuid}}
-                Last IU created at: {{node.last_iu_created_at}}
-                Last IU id: {{node.last_iuid}}
-              </pre>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </ul>
-  </ng-container>
-
-  <ng-template #noData>
-    <p>No data available.</p>
-  </ng-template>
+  <app-timeline [filteredLayers]="filteredLayers"></app-timeline>
 </ng-container>
+
+<ng-template #noData>
+  <p>No data available.</p>
+</ng-template>
+<!-- </ng-container> -->
 

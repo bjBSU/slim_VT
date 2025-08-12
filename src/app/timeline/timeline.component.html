@@ -1,0 +1,34 @@
+
+<!-- slider -->
+<label>Time Stamp: <strong>{{selectedTime}}</strong></label>
+<input 
+    type="range" 
+    [min]="minTime" 
+    [max]="maxTime" 
+    [(ngModel)]="selectedTime"
+    (input)="onTimeChange()"
+/>
+
+
+<!-- display -->
+<ng-container *ngIf="filteredLayers && filteredLayers.length">
+    <ul>
+        <div *ngFor="let layer of filteredLayers">         
+            <ul>
+                <li *ngFor="let node of layer">
+                    <h2>{{node.module}}</h2>
+                    <div class="dataBackDrop" height=node.size() width=node.length()+5>
+                        <pre style="font-family:verdana">Event: {{ node.event }}
+                        Timestamp: {{node.timestamp}}
+                        IU Type: {{node.level}}
+                        First IU created at: {{node.first_iu_created_at}}
+                        First IU id: {{node.first_iuid}}
+                        Last IU created at: {{node.last_iu_created_at}}
+                        Last IU id: {{node.last_iuid}}
+                        </pre>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </ul>
+</ng-container>

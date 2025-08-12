@@ -1,9 +1,9 @@
-import { Component, ContentChild, ElementRef, Input, OnInit, TemplateRef } from '@angular/core';
+import { Component, ContentChild, ElementRef, Input, OnInit, Output, TemplateRef } from '@angular/core';
 import { WebSocketService } from '../services/web-socket.service';
 import { ProcessDataService, ModuleNode } from '../services/process-data.service';
 import { bufferCount, Observable, Subscription } from 'rxjs';
 import { TangleLayoutService, TangleLayout } from '../services/tangle-layout.service';//TangleLayout, Node,
-import { NgIfContext } from '@angular/common';
+
 @Component({
   selector: 'app-logger-display',
   templateUrl: './logger-display.component.html',
@@ -18,6 +18,7 @@ import { NgIfContext } from '@angular/common';
 export class LoggerDisplayComponent implements OnInit {
   @Input() mode: 'top' | 'bottom' = 'top';
 
+  @Output() filteredLayers:ModuleNode[][] = [];
   formattedData: ModuleNode[] = [];
   whole_json: any[] = [];
   newFormat!: Observable<ModuleNode[][]>;
@@ -27,7 +28,7 @@ export class LoggerDisplayComponent implements OnInit {
 
     //assign the observable once
     this.newFormat = this.processDataService.layers$;
-    
+
     this.webSocketService.getServerLoggerMessages().subscribe((message) => {
       this.whole_json.push(message);
       const modTest: ModuleNode = JSON.parse(message);
@@ -35,18 +36,14 @@ export class LoggerDisplayComponent implements OnInit {
       
       this.processDataService.processDataService(this.formattedData)
     });
+
+    this.newFormat.subscribe(layers => {
+      this.filteredLayers = layers;
+    });
   }
   stringify(object: any): string {
     return JSON.stringify(object, null, 2);  // Converts to a readable JSON string
   }
-
-  // trackLayerByIndex(index:number, item: any):number{
-  //   return index;
-  // }
-
-  // trackNodeById(index:number, node:ModuleNode):string{
-  //   return node?.first_iuid || index.toString();
-  // }
 }
 
   
