@@ -1,34 +1,101 @@
 
 <!-- slider -->
-<label>Time Stamp: <strong>{{selectedTime}}</strong></label>
+<!-- <label>Time Stamp: <strong>{{printTime}}</strong></label> -->
+ <!-- <span *ngIf="printTime">Time selected: {{printTime}}</span>
 <input 
     type="range" 
     [min]="minTime" 
     [max]="maxTime" 
     [(ngModel)]="selectedTime"
     (input)="onTimeChange()"
-/>
+/> -->
 
 
 <!-- display -->
-<ng-container *ngIf="filteredLayers && filteredLayers.length">
+ <!-- && filteredLayers.length -->
+<!-- <ng-container *ngIf="filteredLayers">
     <ul>
         <div *ngFor="let layer of filteredLayers">         
             <ul>
-                <li *ngFor="let node of layer">
-                    <h2>{{node.module}}</h2>
-                    <div class="dataBackDrop" height=node.size() width=node.length()+5>
-                        <pre style="font-family:verdana">Event: {{ node.event }}
-                        Timestamp: {{node.timestamp}}
-                        IU Type: {{node.level}}
-                        First IU created at: {{node.first_iu_created_at}}
-                        First IU id: {{node.first_iuid}}
-                        Last IU created at: {{node.last_iu_created_at}}
-                        Last IU id: {{node.last_iuid}}
-                        </pre>
-                    </div>
+                <li *ngFor="let node of layer!">
+                        <h2>{{node.module}}</h2>
+                        <div class="dataBackDrop" height=node.size() width=node.length()+5>
+                            <pre style="font-family:verdana">Event: {{ node.event }}
+                            Timestamp: {{node.timestamp}}
+                            IU Type: {{node.level}}
+                            First IU created at: {{node.first_iu_created_at}}
+                            First IU id: {{node.first_iuid}}
+                            Last IU created at: {{node.last_iu_created_at}}
+                            Last IU id: {{node.last_iuid}}
+                            </pre>
+                        </div>
                 </li>
             </ul>
         </div>
     </ul>
+</ng-container> -->
+
+<div class="slide-container">
+    <span *ngIf="printTime">{{printTime}}    </span>
+    <input 
+        type="range" 
+        [min]="minTime" 
+        [max]="120"
+        [step]="10" 
+        [(ngModel)]="selectedTime"
+        (input)="onTimeChange()"
+    />
+</div>
+
+ <!-- display -->
+<!-- <ng-container *ngIf="filteredLayers">
+    <ul>
+        <div *ngFor="let layer of filteredLayers">         
+            <ul>
+                <li *ngFor="let node of layer!">
+                        <h2>{{node.module}}</h2>
+                        <div class="dataBackDrop" height=node.size() width=node.length()+5>
+                            <pre style="font-family:verdana">Event: {{ node.event }}
+                            Timestamp: {{node.timestamp}}
+                            IU Type: {{node.level}}
+                            First IU created at: {{node.first_iu_created_at}}
+                            First IU id: {{node.first_iuid}}
+                            Last IU created at: {{node.last_iu_created_at}}
+                            Last IU id: {{node.last_iuid}}
+                            </pre>
+                        </div>
+                </li>
+            </ul>
+        </div>
+    </ul>
+</ng-container> -->
+
+<!-- display -->
+<ng-container *ngIf="filteredLayers">
+  <ul>
+    <div *ngFor="let layer of filteredLayers">
+      <ul>
+        <ng-container *ngFor="let node of layer">
+            <h2>{{ node.module }}</h2>
+            <div class="dataBackDrop" height="node.size()" width="node.length()+5">
+              <pre style="font-family:verdana">
+                Event: {{ node.event }}
+                Timestamp: {{ node.timestamp }}
+                IU Type: {{ node.level }}
+                First IU created at: {{ node.first_iu_created_at }}
+                First IU id: {{ node.first_iuid }}
+                Last IU created at: {{ node.last_iu_created_at }}
+                Last IU id: {{ node.last_iuid }}
+              </pre>
+            </div>
+        </ng-container>
+      </ul>
+    </div>
+  </ul>
 </ng-container>
+
+
+<!-- empty state -->
+ <div *ngIf="filteredLayers && !filteredLayers.length">
+    <p>No data avaliable for this time.</p>
+ </div>

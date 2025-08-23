@@ -254,7 +254,7 @@ export class TangleLayoutService {
                 links: [],
               };
             }
-            console.log("created new key in BundleMap", this.BundleMap[key]);
+            // console.log("created new key in BundleMap", this.BundleMap[key]);
             if(node.module != node.previous_nodes.find((n: string) => n === node.module)){
               node.bundle = this.BundleMap[key]; 
             }

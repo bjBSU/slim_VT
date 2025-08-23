@@ -20,6 +20,8 @@
     "@angular/platform-browser": "^14.3.0",
     "@angular/platform-browser-dynamic": "^14.3.0",
     "@angular/router": "^14.3.0",
+    "@syncfusion/ej2-angular-inputs": "^30.2.6",
+    "@syncfusion/ej2-inputs": "^30.2.6",
     "d3": "^6.7.0",
     "d3-lasso": "0.0.5",
     "rxjs": "~7.4.0",

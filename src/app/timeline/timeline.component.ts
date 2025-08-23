@@ -3,7 +3,7 @@ import { TangleLayoutService } from '../services/tangle-layout.service';
 import { ModuleNode, ProcessDataService } from '../services/process-data.service'; 
 import { Observable, Subscription } from 'rxjs';
 import { TimelineStoreService } from '../services/timeline-store.service';
-import { FormsModule } from '@angular/forms';
+
 
 @Component({
   selector: 'app-timeline',
@@ -12,37 +12,78 @@ import { FormsModule } from '@angular/forms';
 })
 export class TimelineComponent implements OnInit {
   @Input() filteredLayers: ModuleNode[][] = [];
+  tempLayers : ModuleNode[][] = [];
+
+  // minTime :number = Date.now();
+  // maxTime :number = Date.now();
   minTime :number = 0;
   maxTime :number = Date.now();
-  selectedTime :number | null= null;
+
+  // selectedTime :number | null= null;
+  selectedTime :number =0;
+
   sliderActive = false;
+  //printTime :string | null=null;
+  printTime :string = "Now";
 
   private sub!: Subscription;
+  targetTimestamp: number | undefined;
 
   constructor(private processDataService: ProcessDataService, private TimelineStoreService: TimelineStoreService){}
   
   ngOnInit(): void {
     //listen to incoming data and push to store
     this.sub = this.processDataService.layers$.subscribe(layers => {
-      layers.flat().forEach(entry => {
+      layers.forEach(entry => {
         this.TimelineStoreService.add(entry);
+
         this.maxTime = Date.now();//keep maxtime for slider
 
-        if(!this.sliderActive){
-          this.selectedTime = this.maxTime;
-          console.log("from timeline component:", this.selectedTime);
-          this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.maxTime));
-          console.log("from timeline.component, filtered layers", this.filteredLayers);
-        }
+        //this.selectedTime = this.maxTime;
+        // if(this.selectedTime === 120 || this.selectedTime === 0){
+        //   this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.maxTime));
+        // }
       });
     });
   }
   
-  onTimeChange():void{
-    this.sliderActive = true;
-    this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.selectedTime!));
-  }
+  //slider change
+  // onTimeChange(){
+  //   this.sliderActive = true;
+  //   this.goLive = false;
 
+  //   if(this.selectedTime){
+  //     this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.selectedTime!));
+  //     this.tempLayers = this.filteredLayers;
+  //   }
+    
+  //   this.printTime = new Date(this.selectedTime!).toISOString().split('.')[0]; 
+  // }
+
+ onTimeChange() {
+  const now = Date.now();
+  const offsetMs = this.selectedTime * 1000; // slider is in seconds → ms
+  const targetTime = now - offsetMs;
+  this.targetTimestamp = targetTime;
+
+  // Save or use targetTime to filter your entries
+  this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.targetTimestamp!));
+  console.log("targetTimestamp: ", this.targetTimestamp);
+  console.log("selectedTime :", this.selectedTime);
+
+  // Pretty print
+  if (this.selectedTime === 120) {
+    this.printTime = 'Now';
+  } else if (this.selectedTime < 60) {
+    this.printTime = `about ${this.selectedTime} seconds ago`;
+  } else {
+    const minutes = Math.floor(this.selectedTime / 60);
+    const seconds = this.selectedTime % 60;
+    this.printTime = seconds === 0
+      ? `about ${minutes} min ago`
+      : `about ${minutes} min ${seconds} sec ago`;
+  }
+}
 
 
   private groupByLayers(entries:ModuleNode[]): ModuleNode[][]{
@@ -56,12 +97,7 @@ export class TimelineComponent implements OnInit {
         map[layerIndex] = [e];
       }
     });
-    return Object.values(map);
-  }
-
-  unlockSlider(){
-    this.sliderActive = false;
-    this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.maxTime));
+    return Object.values(map).map(layer => layer.map(e => ({...e})));
   }
 
   ngOnDestroy(){
