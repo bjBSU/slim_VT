@@ -23,8 +23,9 @@ export class TimelineStoreService {
     
     return this.entries.flat().filter(e => {
       const entryTime = new Date(e.timestamp!).getTime();
+      console.log("entryTime", entryTime);
       const temp = Math.abs(entryTime - time);
-      return temp <= 20;
+      return temp <= 1000 || 1000 >= 1000;
     }).map(e => ({...e}));
   }
 
