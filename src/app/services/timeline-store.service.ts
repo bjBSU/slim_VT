@@ -8,27 +8,35 @@ import { BehaviorSubject, Timestamp } from 'rxjs';
 export class TimelineStoreService {
   private entries : ModuleNode[][] = [];
   private entries$ = new BehaviorSubject<ModuleNode[][]>([]);
-
+  
+  /**
+   * Adds incoming entries
+   * @param entry 
+   */
   add(entry: ModuleNode[]){
     this.entries.push(entry);
     this.entries$.next([...this.entries]);
   }
 
-  //input is number so before calling this method make sure this is taken into account
-  getEntriesAt(time: number): ModuleNode[]{
-    // const sliderIso = new Date(time).toISOString().split('.')[0].slice(0);
-    // console.log("new time of the selectedTime number:", sliderIso);
-    // return this.entries.flat().filter(e => 
-    //   e.timestamp!.split('.')[0].slice(0) == sliderIso).map(e => ({...e}));
-    
+  
+  /**
+   * Filters through the recorded entries and grabs the ones with the 
+   * adjusted timestamp closest to time
+   * @param time 
+   * @returns 
+   */
+  getEntriesAt(time: number): ModuleNode[]{    
     return this.entries.flat().filter(e => {
       const entryTime = new Date(e.timestamp!).getTime();
-      console.log("entryTime", entryTime);
       const temp = Math.abs(entryTime - time);
-      return temp <= 1000 || 1000 >= 1000;
+      return temp <= 1000 || temp >= 1000;
     }).map(e => ({...e}));
   }
 
+/**
+ * Returns all entries. Used for testing.
+ * @returns 
+ */
   getAll$(){
     return this.entries$.asObservable();
   }

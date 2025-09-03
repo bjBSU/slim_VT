@@ -19,30 +19,3 @@
     width : 80%;
   }
 
-  #ticks_slider .e-range{
-    z-index : unset;
-  }
-
-  #ticks_slider .e-scale{
-    z-index: 0;
-  }
-
-  #ticks_slider .e-scale .e-custom::before{
-    font-size: 10px;
-  }
-
-  #ticks_slider .e-scale .e-custom::before{
-    top: calc(50% + 1px);
-    left: calc(50% - 5px);
-  }
-
-  #slider-wrapper #ticks_slider .e-scale :nth-child(1) ::before{
-    top: calc(50% + 1px);
-    left: calc(0% - 5px);
-  }
-
-  #slider-wrapper #ticks_slider .e-scale :nth-child(6) ::before{
-    top: calc(50% + 1px);
-    left: calc(100% - 6px);
-  }
-
