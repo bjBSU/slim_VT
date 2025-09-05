@@ -14,10 +14,6 @@ Run `ng generate component component-name` to generate a new component. You can 
 
 Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
 
-## Running unit tests
-
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
-
 ## Running end-to-end tests
 
 Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
@@ -25,3 +21,25 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+
+
+# User Guide 
+
+1. Git clone both of the repositories.
+
+2. Install necessary imports
+
+3. Create runner file
+
+4. Add the logger configure line to runner if not already added
+
+5. In two separate anaconda(or any kind) terminals(or the same location) go to the the repositories
+
+  5.1 First in the terminal with the Angular logger component enter - ng serve - once inside the logger,     this     (in a few seconds will spin up the angular application. Once its spun up click or go to the location.
+  5.2 In the second terminal start up the runner soon after by running - python runner.py
+  
+6. Once both terminals are running wait a couple of seconds and the modules should show (the more complicated the connections the longer it may take)
+
+7. If you need to restart the runner for whatever reason close the old and then refresh the angular application
+
+8. If you need to restart the angular application, stop the runner and follow step 5
