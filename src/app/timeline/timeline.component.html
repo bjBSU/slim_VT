@@ -13,11 +13,11 @@
 </div>
 
 <!-- Displays the content of the modules -->
-<ng-container *ngIf="(tempLayers && tempLayers.length ? tempLayers : filteredLayers) as layers">
-  <ul>
-    <div *ngFor="let layer of layers">
+<ng-container *ngIf="filteredLayers">
       <ul>
-        <ng-container *ngFor="let node of layer">
+        <div *ngFor="let layers of filteredLayers">
+          <ul>
+        <ng-container *ngFor="let node of layers">
             <h2>{{ node.module }}</h2>
             <div class="dataBackDrop" height="node.size()" width="node.length()+5">
               <pre style="font-family:verdana">
