@@ -10,6 +10,7 @@ export class WebSocketService {
   constructor() { 
     this.socket = io('http://localhost:3000', {
       reconnection : true,
+      //gives the time for user to start up their runner file to connect
       reconnectionAttempts: 100,
       reconnectionDelay: 1000
     });
@@ -19,7 +20,6 @@ export class WebSocketService {
     });
 
     this.socket.on('disconnect', (reason) =>{
-      // window.location.reload();
       console.log('disconnected: ', reason);
     })
   }

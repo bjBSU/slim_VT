@@ -1,4 +1,4 @@
-
+<!-- Displays the button and slider, and is where changes to the slider are acted on -->
 <div class="slide-container">
     <button (click)="goLive()" [disabled]="goLiveMode">Go Live</button>
     <span *ngIf="printTime">{{printTime     }} </span>
@@ -12,6 +12,7 @@
     />
 </div>
 
+<!-- Displays the content of the modules -->
 <ng-container *ngIf="(tempLayers && tempLayers.length ? tempLayers : filteredLayers) as layers">
   <ul>
     <div *ngFor="let layer of layers">

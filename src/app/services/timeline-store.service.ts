@@ -6,8 +6,8 @@ import { BehaviorSubject, Timestamp } from 'rxjs';
   providedIn: 'root'
 })
 export class TimelineStoreService {
-  private entries : ModuleNode[][] = [];
-  private entries$ = new BehaviorSubject<ModuleNode[][]>([]);
+  private entries : ModuleNode[][] = [];//creates a sort of array of arrays
+  private entries$ = new BehaviorSubject<ModuleNode[][]>([]);//cumulative collection of entries
   
   /**
    * Adds incoming entries

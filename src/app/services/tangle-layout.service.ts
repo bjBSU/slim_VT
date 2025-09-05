@@ -10,7 +10,7 @@ export interface Node {
   level?: number; //depth in the graph
   previous_nodes: string[]; //parent modules  
   next_nodes: string[]; //child modules    
-  bundle?: Bundle; 
+  bundle?: Bundle;  //single bundle
   bundles?: Bundle[]; //sharing dependancy bundles
   bundles_items?: Record<string, Bundle[]>;//saves a module and its corresponding bundle
   height?: number; //visual height due to bundles
@@ -25,7 +25,7 @@ export interface Bundle {
   next_nodes: string[];//child nodes        
   level?: number; 
   span?: number;
-  i?: number;
+  i?: number; //index
   x?: number;
   y?: number;
   links?: Link[]; 
@@ -37,12 +37,16 @@ export interface Link {
   source: string;//Node
   bundle: Bundle | null;
   target: Node;
+  //source x & y
   xs?: number;
   ys?: number;
+  //bundle x & y
   xb?: number;
   yb?: number;
+  //target x & y
   xt?: number;
   yt?: number;
+  //these help determine the curve of the connection lines
   c1?: number;
   c2?: number;
 }
@@ -79,6 +83,7 @@ export class TangleLayoutService {
   constructor(private nodeConnections: NodeConnectionsService){};
 
   constructTangleLayout(modules: ModuleNode[][]): Promise<TangleLayout> {
+    //promise ensures something as a return
     return new Promise((resolve, reject) => {
       try {
         // Convert ModuleNodes into internal mutable Nodes
@@ -122,6 +127,7 @@ export class TangleLayoutService {
         });
         const bundles = Array.from(bundlesMap.values());
 
+        //final output
         resolve({
           levels: this.nodeLayers,
           nodes: this.nodeLayers.flat(),
@@ -137,6 +143,7 @@ export class TangleLayoutService {
   }
     /**
      * Build Nodes takes in a double array of moduleNodes from logger component display
+     * and builds a new node out of their possible position on the chart (level)
      * @param modules 
      * @param nodeHeight 
      * @param xSpacing 
@@ -206,7 +213,10 @@ export class TangleLayoutService {
       this.moduleToCache(this.nodeConnections.getAllNodes());
     }
 
-    //function that computes relationship between parent and child modules
+    
+    /**
+     * Function computes relationship between parent and child modules.
+     */
     private computeBundles(){
       const reverseMap: Record<string, string[]> = {};//maps each node to its parent mod name
 
@@ -293,7 +303,11 @@ export class TangleLayoutService {
         }
       });
     }
-        
+    
+    /**
+     * Makes sure that all Node know what they are connected to.
+     * @returns 
+     */
     private computeLinks(): Link[]{
       //add check that sees if nodeConnections already has that link and if so skip
       const linkExists = (source:string, target: Node): boolean => {
@@ -321,6 +335,8 @@ export class TangleLayoutService {
             .map(p => this.nodeConnections.getNode(p)?.level)
             .filter(lvl => lvl != null) as number[];
 
+          //makes sure that the child node is being leveled correctly based on its lowest parent
+          //that way their is no chance a child would be higher then its parent node
           if(parentLevel.length > 0){
             const maxParentLevel = Math.max(...parentLevel);
             n.level =  maxParentLevel + 1;
@@ -334,6 +350,11 @@ export class TangleLayoutService {
       return this.links;
     }
 
+    /**
+     * Bundles have been made but this checks to make sure all Nodes know who they are connected to.
+     * This fuinction helps make sure that connections are made between modules even if 
+     * a child node isnt aware it has a parent. EX. debug module doesn't know it has any parent connection. 
+     */
     private computeBundlesBack(){
       this.nodeLayers.flat().forEach(n => this.moduleMap.set(n.module, n));
 
@@ -376,7 +397,7 @@ export class TangleLayoutService {
         });
       });
 
-      //redone for missing source and target nodes
+      //handles missing source and target nodes
       this.links.forEach(l => {
         if(!l.bundle){
           console.warn("Link missing bundle:", l);
@@ -391,6 +412,9 @@ export class TangleLayoutService {
       });
     }
 
+    /**
+     * Updates each Nodes position based on their level
+     */
     private positionNodes(){
       // Layout constants
       const padding = 8;
@@ -408,6 +432,10 @@ export class TangleLayoutService {
       });
     }
 
+    /**
+     * Updates each Node bundle position based on their level.
+     * Essential if there are module connections completely seperate from each other.
+     */
     private positionBundles(){
       let i = 0;
       this.nodeLayers.flat().forEach(level => {
@@ -431,7 +459,9 @@ export class TangleLayoutService {
       });
     }
 
-
+    /**
+     * Calculates the start and end for each link between nodes
+     */
     private positionLinks(){
       const default_shift = 4;
       const defaultControlOffset = 5;
@@ -473,6 +503,9 @@ export class TangleLayoutService {
       });
     }
 
+    /**
+     * Adjust spacing between layers if the connections are large and vast.
+     */
     private compressVerticalSpace() {
       // Total vertical offset applied so far
       let accumulatedYOffset = 0;
@@ -489,9 +522,13 @@ export class TangleLayoutService {
       });
     }
 
-  //create a connection cache
-  //allNodes isnt being called directly this is being refernced in 
-  // buildNodes and each node is being added one at a time
+  
+  /**
+   * create a connection cache.
+   * allNodes isnt being called directly this is being refernced in 
+   * buildNodes and each node is being added one at a time.
+   * @param allNodes 
+   */
   private moduleToCache(allNodes: Node[]){
     allNodes.forEach(node => {
 
@@ -560,6 +597,10 @@ export class TangleLayoutService {
     });
   }
 
+  /**
+   * Sorts the Layers by their index and not by the time that they were made.
+   * Because often the Layers are made not in order of how they should display.
+   */
   private sortLayersByIndex(){
     const levelMap: Record<number, Node[]> = {};
 

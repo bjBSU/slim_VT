@@ -1,3 +1,4 @@
+<!-- Calls the chart-render to make the Module Connections Tab, pass layers through -->
 <ng-container *ngIf="mode === 'top'">
   <p *ngIf="formattedData.length === 0">No data recieved</p>
   <ng-container *ngIf="newFormat | async as layers">
@@ -5,10 +6,12 @@
   </ng-container>
 </ng-container>
 
+<!-- Calls the second tab Module Conent and passes through filteredLayers -->
 <ng-container *ngIf="mode === 'bottom'">
   <app-timeline [filteredLayers]="filteredLayers"></app-timeline>
 </ng-container>
 
+<!-- Pre-data flowing display -->
 <ng-template #noData>
   <p>No data available.</p>
 </ng-template>

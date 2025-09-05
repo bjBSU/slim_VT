@@ -16,9 +16,12 @@ import { TangleLayoutService, TangleLayout } from '../services/tangle-layout.ser
  * sending batches of them to the service
  */
 export class LoggerDisplayComponent implements OnInit {
-  @Input() mode: 'top' | 'bottom' = 'top';
+  @Input() mode: 'top' | 'bottom' = 'top';//keeps track of the "mode" or page the user is on
 
+  //Sending Filtered Layers to timeline Component
   @Output() filteredLayers:ModuleNode[][] = [];
+
+  //adjust the format to be ModuleNode
   formattedData: ModuleNode[] = [];
   whole_json: any[] = [];
   newFormat!: Observable<ModuleNode[][]>;
@@ -26,23 +29,22 @@ export class LoggerDisplayComponent implements OnInit {
 
   ngOnInit(): void {
 
-    //assign the observable once
+    //assign the observable once, gets any current layers
     this.newFormat = this.processDataService.layers$;
 
+    //Gets JSON objects from web socket service
     this.webSocketService.getServerLoggerMessages().subscribe((message) => {
       this.whole_json.push(message);
-      const modTest: ModuleNode = JSON.parse(message);
+      const modTest: ModuleNode = JSON.parse(message);//parse data to fit the ModuleNode format
       this.formattedData.push(modTest);
       
-      this.processDataService.processDataService(this.formattedData)
+      this.processDataService.processDataService(this.formattedData);//checks that all formatted data is created correctly 
     });
 
+    //sets filteredLayers
     this.newFormat.subscribe(layers => {
       this.filteredLayers = layers;
     });
-  }
-  stringify(object: any): string {
-    return JSON.stringify(object, null, 2);  // Converts to a readable JSON string
   }
 }
 

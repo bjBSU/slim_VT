@@ -1,7 +1,6 @@
-import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
-import { TangleLayoutService } from '../services/tangle-layout.service';
+import { Component, Input, OnInit } from '@angular/core';
 import { ModuleNode, ProcessDataService } from '../services/process-data.service'; 
-import { Observable, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { TimelineStoreService } from '../services/timeline-store.service';
 
 
@@ -11,25 +10,28 @@ import { TimelineStoreService } from '../services/timeline-store.service';
   styleUrls: ['./timeline.component.css']
 })
 export class TimelineComponent implements OnInit {
+  // this filtered layers is constantly recieving new module information
   @Input() filteredLayers: ModuleNode[][] = [];
+  //temoLayer is used to print the layers to the console
   tempLayers : ModuleNode[][] = [];
 
+  //slider defaults
   minTime :number = 0;
   maxTime :number = Date.now();
   selectedTime :number =0;
-
   sliderActive = false;
   printTime :string = "Now";
+  goLiveMode: boolean = true;
 
   private sub!: Subscription;
   targetTimestamp: number | undefined;
 
-  goLiveMode: boolean = true;
-
   constructor(private processDataService: ProcessDataService, private TimelineStoreService: TimelineStoreService){}
   
+  /**
+   * listen to incoming data through sub and push to store
+   */
   ngOnInit(): void {
-    //listen to incoming data and push to store
     this.sub = this.processDataService.layers$.subscribe(layers => {
       layers.forEach(entry => {
         this.TimelineStoreService.add(entry);
@@ -47,8 +49,9 @@ export class TimelineComponent implements OnInit {
    * new time it lands on is returned and processed.
    */
   onTimeChange() {
-    this.goLiveMode = false;
+    this.goLiveMode = false;//freeze slider
     
+    //calculate targetTime (the desired time to get entries at)
     const now = Date.now();
     const offsetMs = this.selectedTime * 1000; 
     const targetTime = now - offsetMs;
@@ -58,7 +61,7 @@ export class TimelineComponent implements OnInit {
     this.filteredLayers = this.groupByLayers(this.TimelineStoreService.getEntriesAt(this.targetTimestamp!));
     this.tempLayers = this.filteredLayers;
     
-    // Pretty print
+    // calculated how long ago the slider will show from current
     if (this.selectedTime === 120) {
       this.printTime = 'Now';
     } else if (this.selectedTime < 60) {

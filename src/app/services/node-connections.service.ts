@@ -11,6 +11,13 @@ export class NodeConnectionsService {
 
   constructor() { }
 
+  /**
+   * The purpose of this method is to check incoming data, 
+   * see if it is a new module or a current one that needs to be updated
+   * with new information.
+   * @param newNode 
+   * @returns 
+   */
   setNode(newNode: Node | null): Node | null{
     if(!newNode) return null;//if null
     
@@ -43,22 +50,43 @@ export class NodeConnectionsService {
     }
   }
 
+  /**
+   * Gets a node based on its 'key' which is really just the name of the module.
+   * @param key 
+   * @returns 
+   */
   getNode(key: string): Node | undefined{
       return this.idToNode[key];
   }
 
+  /**
+   * Checks if there is anything being stored.
+   * @returns 
+   */
   isCacheEmpty() : boolean{
       return Object.keys(this.idToNode).length === 0;
   }
 
+  /**
+   * Clears the Record
+   */
   clearCache(): void{
       this.idToNode = {};
   }
 
+  /**
+   * Checks if the key (module name) exists in the Record.
+   * @param key 
+   * @returns 
+   */
   has(key:string): boolean{
     return key in this.idToNode;
   }
   
+  /**
+   * Returns all of the existing Nodes.
+   * @returns 
+   */
   getAllNodes(): Node[]{
     return Object.values(this.idToNode);
   }

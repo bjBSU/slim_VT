@@ -1,20 +1,18 @@
-import { Time } from '@angular/common';
 import { Injectable } from '@angular/core';
-import { forEach } from 'lodash';
 import { BehaviorSubject } from 'rxjs/internal/BehaviorSubject';
 
 //primary format needed for building the chart
 export interface ModuleNode {
   module: string; //module name
   previous_modules?: string[]; //parent connections
-  next_modules?: string[];
+  next_modules?: string[]; //children connections
   first_iuid?: string;
   first_iu_created_at?: string;
   last_iuid?: string;
   last_iu_created_at?: string;
-  event?: string;
-  level?: string;
-  timestamp?: string;
+  event?: string; //module event
+  level?: string; //level in the chart
+  timestamp?: string; //time created
 }
 
 @Injectable({
@@ -55,7 +53,6 @@ export class ProcessDataService {
     //Popuates inDegree and child map
     for (const node of nodes) {
       if (!node.previous_modules) continue;
-      //if(node.previous_modules != null){//*plane edit
         for (const parent of node.previous_modules) {//checks each parent for the module
           if (!childrenMap.has(parent)) {//checks if that node is a parent if not it makes it one
             childrenMap.set(parent, []);
@@ -63,7 +60,6 @@ export class ProcessDataService {
           inDegree.set(node.module, (inDegree.get(node.module) || 0) + 1);//moves the layer over 1
           childrenMap.get(parent)!.push(node.module);//adds the child to the parent node list
         }
-      //}
     }
 
     // Kahn's algorithm for layering (Topological Sort-like)
@@ -74,6 +70,7 @@ export class ProcessDataService {
     for (const [module, degree] of inDegree.entries()) {
       if (degree === 0) currentLayer.push(module);
     }
+    
    //process the current node
     while (currentLayer.length > 0) {
       const layerNodes: ModuleNode[] = [];
