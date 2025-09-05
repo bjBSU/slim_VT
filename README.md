@@ -28,19 +28,88 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 ## 1. Git clone this repository  
 
 ## 2. Install necessary imports
+This may include cloning retico repositorys into the same folder the Vis. Tool is located.
 
 ## 3. Create runner file  
+Example Runner:
+  `import os, sys
+  os.environ['GASR'] = 'retico-googleasr'
+  os.environ['RETICO'] = 'retico-core'
+  os.environ['WASR'] = 'retico-whisperasr'
+  os.environ['DASR'] = 'retico-wav2vecasr'
+  os.environ['ZMQ'] = 'retico-zmq'
+  os.environ['RETICOV'] = 'retico-vision'
+  os.environ['DASR'] = 'retico-wav2vecasr'
+  
+  sys.path.append(os.environ['GASR'])
+  sys.path.append(os.environ['WASR'])
+  sys.path.append(os.environ['RETICO'])
+  sys.path.append(os.environ['DASR'])
+  sys.path.append(os.environ['ZMQ'])
+  sys.path.append(os.environ['RETICOV'])
+  sys.path.append(os.environ['DASR'])
+  
+  import retico_core
+  from retico_core.debug import DebugModule
+  from retico_whisperasr.whisperasr import WhisperASRModule
+  from retico_zmq.zmq import WriterSingleton, ZeroMQWriter
+  from retico_core.audio import MicrophoneModule
+  from retico_wav2vecasr.wav2vecasr import Wav2VecASRModule
+  
+  
+  # configure loggers
+  terminal_logger, file_logger, server_logger = retico_core.log_utils.configurate_logger(
+      "logs/run", filters = None, server_port='http://localhost:3000'
+  )
+  
+  microphone = MicrophoneModule()
+  asr = WhisperASRModule(language="english")
+  debug = DebugModule(print_payload_only=True)
+  wav2vec_asr = Wav2VecASRModule()
+  
+  ip = '127.0.0.1'#10.253.18.143' use the writer PC's IP
+  WriterSingleton(ip=ip, port='6002')#figure out ip
+  zmqwriter = ZeroMQWriter(topic='asr')
+  microphone.subscribe(asr)
+  microphone.subscribe(wav2vec_asr)
+  asr.subscribe(zmqwriter)
+  zmqwriter.subscribe(debug)
+  #additional tests
+  wav2vec_asr.subscribe(debug)
+  microphone.subscribe(debug)
+  asr.subscribe(debug)
+  
+  microphone.run()
+  wav2vec_asr.run()
+  asr.run()
+  zmqwriter.run()
+  debug.run()
+  
+  input()
+  
+  asr.stop()
+  wav2vec_asr.stop()
+  microphone.stop()
+  zmqwriter.stop()
+  debug.stop()`
 
 ## 4. Add the logger configure line to runner if not already added
   Inside runner adding the following commands to ensure that the node.js server will be set up.
+  `# configure loggers
+terminal_logger, file_logger, server_logger = retico_core.log_utils.configurate_logger(
+    "logs/run", filters = None, server_port='http://localhost:3000'
+)`
+- Additionaly ensure that the correct branch of retico-core is being used
 
 ## 5. Open two separate anaconda terminals
-  In one terminal go to the location of the cloned repository.
-  In the other go to the location of the runner file.
+  - In one terminal go to the location of the cloned repository.
+  - In the other go to the location of the runner file.
 
-  5.1 First in the terminal with the Angular logger component enter - ng serve - once inside the logger,     this     (in a few seconds will spin up the angular application. Once its spun up click or go to the location.
+  5.1 First in the terminal with the Angular logger component enter - ng serve - once inside the logger,     this     (in a few seconds will spin up the angular application. Once its spun up click or go to the location. 
+  `ng serve`
   
-  5.2 In the second terminal start up the runner soon after by running - python runner.py
+  5.2 In the second terminal start up the runner soon after by running:
+  `python runner.py`
   
 ## * Note *  
 Once both terminals are running wait a couple of seconds and the modules should show (the more complicated the connections the longer it may take).
