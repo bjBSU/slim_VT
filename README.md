@@ -92,14 +92,18 @@ terminal_logger, file_logger, server_logger = retico_core.log_utils.configurate_
 
   5.1 First in the terminal with the Angular logger component enter - ng serve - once inside the logger,     this     (in a few seconds will spin up the angular application. Once its spun up click or go to the location. 
   
-  `ng serve`
+  `$ ng serve`
   
   5.2 In the second terminal start up the runner soon after by running:
   
-  `python runner.py`
+  `$ python runner.py`
   
 ## * Note *  
 Once both terminals are running wait a couple of seconds and the modules should show (the more complicated the connections the longer it may take).
+
+If you need to restart the runner for whatever reason close the old and then refresh the angular application.
+
+If you need to restart the angular application, stop the runner and follow step 5.
 
 
 # Additional Help #
@@ -126,8 +130,3 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
 
 
-
-
-If you need to restart the runner for whatever reason close the old and then refresh the angular application.
-
-If you need to restart the angular application, stop the runner and follow step 5.
